@@ -217,6 +217,25 @@ def test_parse_constituents_handles_footnotes():
         scan.parse_constituents(f"<table><tr><th>Symbol</th></tr>{rows}</table>", (480, 520))
 
 
+def test_parse_constituents_two_row_header_and_exchange_prefix():
+    body = "".join(f"<tr><td>NASDAQ: T{i:03d}</td><td>Co {i}[a]</td></tr>" for i in range(100))
+    html = f"""<table>
+      <tr><th colspan="2">Current components</th></tr>
+      <tr><th>Ticker</th><th>Company</th></tr>{body}</table>"""
+    members = scan.parse_constituents(html, (90, 115))
+    assert len(members) == 100
+    assert members[0] == {"ticker": "T000", "name": "Co 0", "sector": ""}
+
+
+def test_parse_constituents_skips_ambiguous_changes_table():
+    body = "".join(f"<tr><td>2020</td><td>A{i:03d}</td><td>R{i:03d}</td></tr>" for i in range(100))
+    html = f"""<table>
+      <tr><th rowspan="2">Date</th><th>Added</th><th>Removed</th></tr>
+      <tr><th>Ticker</th><th>Ticker</th></tr>{body}</table>"""
+    with pytest.raises(ValueError, match="tables on the page"):
+        scan.parse_constituents(html, (90, 115))
+
+
 # --------------------------------------------------------------------------- #
 # End to end
 # --------------------------------------------------------------------------- #

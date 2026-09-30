@@ -92,31 +92,36 @@ UNIVERSES = {
 # --------------------------------------------------------------------------- #
 # Universe
 # --------------------------------------------------------------------------- #
-def _header(c) -> str:
-    """Column label without Wikipedia footnote markers: 'Ticker[12]' -> 'Ticker'."""
-    return re.sub(r"\[[^\]]*\]", "", str(c)).strip()
-
-
 def _cell(v) -> str:
-    return "" if pd.isna(v) else str(v).strip()
+    """Cell or header text without Wikipedia footnote markers: 'Ticker[12]' -> 'Ticker'."""
+    return "" if pd.isna(v) else re.sub(r"\[[^\]]*\]", "", str(v)).strip()
+
+
+def _label(c) -> str:
+    # two-row headers come back as tuples; the lower row names the column
+    return _cell(c[-1] if isinstance(c, tuple) else c)
 
 
 def parse_constituents(html: str, size: tuple[int, int]) -> list[dict]:
     """Find the constituents table on a Wikipedia index page."""
     lo, hi = size
+    seen_tables = []
     for table in pd.read_html(StringIO(html)):
-        if isinstance(table.columns, pd.MultiIndex):  # e.g. the S&P "changes" table
-            continue
-        cols = {_header(c): c for c in table.columns}
-        pick = lambda *names: next((cols[n] for n in names if n in cols), None)
-        sym_col = pick("Symbol", "Ticker")
+        labels = [_label(c) for c in table.columns]
+        seen_tables.append(f"{len(table)} rows {labels[:6]}")
+        cols: dict[str, list] = {}
+        for label, c in zip(labels, table.columns):
+            cols.setdefault(label, []).append(c)
+        # a label used twice (the S&P "changes" table has Added/Ticker and Removed/Ticker) is ambiguous
+        pick = lambda *names: next((cols[n][0] for n in names if len(cols.get(n, ())) == 1), None)
+        sym_col = pick("Symbol", "Ticker", "Ticker symbol")
         if sym_col is None or not lo <= len(table) <= hi:
             continue
         name_col = pick("Security", "Company", "Name")
         sector_col = pick("GICS Sector", "ICB Industry", "Sector", "Industry")
         members, seen = [], set()
         for _, r in table.iterrows():
-            t = _cell(r[sym_col]).upper().replace(".", "-")
+            t = _cell(r[sym_col]).split(":")[-1].strip().upper().replace(".", "-")  # "NASDAQ: AAPL"
             if not re.fullmatch(r"[A-Z][A-Z0-9-]{0,9}", t) or t in seen:
                 continue
             seen.add(t)
@@ -127,7 +132,8 @@ def parse_constituents(html: str, size: tuple[int, int]) -> list[dict]:
             })
         if lo <= len(members) <= hi:
             return members
-    raise ValueError("constituent table not found")
+        seen_tables[-1] += f" -> {len(members)} usable tickers"
+    raise ValueError("constituent table not found; tables on the page: " + " | ".join(seen_tables))
 
 
 def fetch_constituents(key: str) -> list[dict]:
@@ -144,6 +150,7 @@ def fetch_constituents(key: str) -> list[dict]:
         )
         resp.raise_for_status()
         members = parse_constituents(resp.text, UNIVERSES[key]["size"])
+        print(f"{UNIVERSES[key]['name']}: {len(members)} members from Wikipedia", file=sys.stderr)
         cache[key] = members
         UNIVERSE_CACHE.write_text(json.dumps(cache, indent=1))
         return members
