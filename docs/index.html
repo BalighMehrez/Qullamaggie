@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Qullamaggie setups</title>
+<meta name="description" content="Active Qullamaggie breakouts, episodic pivots and parabolic shorts in the Nasdaq-100 and S&P 500, with entry triggers and stops. Updated after every US close.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #E7ECF1;
+  --surface: #F8FAFC;
+  --ink: #17212C;
+  --muted: #5A6778;
+  --rule: #CBD3DD;
+  --up: #1D7A58;
+  --down: #B5382D;
+  --breakout: #2A57C9;
+  --ep: #7A3FB8;
+  --parabolic: #C4521A;
+  --stop: #B5382D;
+  --ma: #8C98A7;
+  --focus: #2A57C9;
+  --font: "Archivo", "Helvetica Neue", Arial, system-ui, sans-serif;
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111820; --surface: #19222D; --ink: #E4EAF0; --muted: #93A1B2; --rule: #2B3745;
+    --up: #3BBE8B; --down: #F0705F; --breakout: #7D9FFF; --ep: #B98BEF; --parabolic: #F28C4E;
+    --stop: #F0705F; --ma: #5F6D7E; --focus: #7D9FFF; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111820; --surface: #19222D; --ink: #E4EAF0; --muted: #93A1B2; --rule: #2B3745;
+  --up: #3BBE8B; --down: #F0705F; --breakout: #7D9FFF; --ep: #B98BEF; --parabolic: #F28C4E;
+  --stop: #F0705F; --ma: #5F6D7E; --focus: #7D9FFF; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font); font-size: 16px; line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+button, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+/* top bar */
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0; flex-wrap: wrap; }
+.brand { font-weight: 700; font-stretch: 110%; letter-spacing: -0.01em; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 3px; }
+.seg button { border: 0; background: none; padding: 7px 14px; border-radius: 7px; cursor: pointer; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+/* hero */
+.hero { padding: 28px 0 32px; border-bottom: 1px solid var(--rule); }
+.count {
+  margin: 0; font-size: clamp(64px, 14vw, 168px); line-height: 0.88;
+  font-weight: 800; font-stretch: 125%; letter-spacing: -0.035em;
+}
+.count small { font-size: 0.34em; font-weight: 600; letter-spacing: -0.01em; margin-left: 0.2em; }
+.notes li::first-letter { text-transform: uppercase; }
+.lede { margin: 18px 0 0; font-size: clamp(18px, 2.4vw, 22px); max-width: 38em; }
+.regime { margin: 14px 0 0; color: var(--muted); max-width: 44em; display: flex; gap: 10px; align-items: baseline; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; transform: translateY(1px); }
+.dot.favorable { background: var(--up); } .dot.mixed { background: #C99A1C; } .dot.unfavorable { background: var(--down); }
+.demo, .stale { margin: 18px 0 0; padding: 10px 14px; border-left: 4px solid var(--parabolic); background: var(--surface); max-width: 44em; }
+.stale { border-left-color: var(--down); }
+
+/* controls */
+.controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 20px 0 12px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 6px 13px; cursor: pointer; font-size: 15px; }
+.chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.chip span { opacity: 0.65; margin-left: 4px; }
+.sort { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 15px; }
+.sort select { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; }
+
+/* setups */
+.list { display: grid; gap: 14px; padding-bottom: 40px; }
+.setup {
+  display: grid; grid-template-columns: 180px 1fr 230px; gap: 20px;
+  background: var(--surface); border: 1px solid var(--rule); border-left: 5px solid var(--c);
+  border-radius: 6px; padding: 18px;
+}
+.setup[data-type="breakout"] { --c: var(--breakout); }
+.setup[data-type="ep"] { --c: var(--ep); }
+.setup[data-type="parabolic"] { --c: var(--parabolic); }
+.tk { font-size: 30px; font-weight: 800; font-stretch: 115%; letter-spacing: -0.02em; line-height: 1; }
+.co { color: var(--muted); font-size: 14px; margin-top: 6px; }
+.kind { margin-top: 14px; font-weight: 700; color: var(--c); }
+.status { display: inline-block; margin-top: 6px; font-size: 13px; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--c); color: var(--c); }
+.status.triggered { background: var(--c); color: var(--surface); }
+.chart svg { width: 100%; height: auto; display: block; }
+.notes { margin: 10px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.levels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; margin: 0; align-content: start; }
+.levels div { min-width: 0; }
+.levels dt { font-size: 13px; color: var(--muted); }
+.levels dd { margin: 0; font-size: 20px; font-weight: 650; }
+.levels .big dd { font-size: 26px; font-weight: 750; }
+.levels .trig dd { color: var(--c); }
+.levels .stp dd { color: var(--stop); }
+.levels .full { grid-column: 1 / -1; }
+.empty { background: var(--surface); border: 1px dashed var(--rule); border-radius: 6px; padding: 28px; color: var(--muted); }
+
+/* method */
+.method { border-top: 1px solid var(--rule); padding: 28px 0 12px; }
+.method h2 { font-size: 24px; font-stretch: 115%; margin: 0 0 14px; letter-spacing: -0.01em; }
+.method details { border-bottom: 1px solid var(--rule); padding: 12px 0; max-width: 46em; }
+.method summary { cursor: pointer; font-weight: 650; }
+.method p { margin: 10px 0 0; color: var(--muted); }
+footer { color: var(--muted); font-size: 14px; padding: 20px 0 40px; }
+
+@media (max-width: 860px) {
+  .setup { grid-template-columns: 1fr 1fr; }
+  .chart { grid-column: 1 / -1; order: 3; }
+}
+@media (max-width: 520px) {
+  .wrap { padding: 0 14px; }
+  .setup { grid-template-columns: 1fr; padding: 14px; gap: 14px; }
+  .levels { grid-template-columns: repeat(3, 1fr); }
+  .levels .full { grid-column: auto; }
+  .levels .big dd { font-size: 22px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .count { animation: rise 0.5s ease-out both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <div class="brand">Qullamaggie setups</div>
+    <div class="seg" role="group" aria-label="Universe">
+      <button data-u="ndx" aria-pressed="true">Nasdaq-100</button>
+      <button data-u="spx" aria-pressed="false">S&amp;P 500</button>
+    </div>
+  </header>
+
+  <section class="hero" aria-live="polite">
+    <h1 class="count" id="count">&nbsp;</h1>
+    <p class="lede" id="lede">Loading the latest scan.</p>
+    <p class="regime" id="regime" hidden></p>
+    <p class="demo" id="demo" hidden>This is sample data with fictional tickers. Real setups appear after the first scheduled scan runs following a US market close.</p>
+    <p class="stale" id="stale" hidden></p>
+  </section>
+
+  <div class="controls">
+    <div class="chips" role="group" aria-label="Setup type" id="chips"></div>
+    <label class="sort">Sort by
+      <select id="sort">
+        <option value="dist">Closest to trigger</option>
+        <option value="risk">Tightest stop</option>
+        <option value="rs">Strongest relative strength</option>
+      </select>
+    </label>
+  </div>
+
+  <main class="list" id="list"></main>
+
+  <section class="method">
+    <h2>How setups are found</h2>
+    <details>
+      <summary>Breakouts</summary>
+      <p>A stock in the top 30% of its index by 1, 3 and 6-month performance, up 30% or more in its prior leg, then consolidating for 1 to 9 weeks without giving back more than 25%. The last five days must be tight, volume below its 50-day average, and price riding a rising 20-day average. The trigger is the high of that tight range. Buy the break of the opening-range high once price is through it, and place the stop at the day's low. The listed stop is the day's low capped at one ADR below the trigger.</p>
+    </details>
+    <details>
+      <summary>Episodic pivots</summary>
+      <p>A gap of 8% or more on at least 3 times average volume within the last five sessions, with price still above the gap-day low. Stocks that were flat or down before the gap are flagged as neglected, which Kullamägi treats as the stronger version. The trigger is the high since the gap and the stop is the gap-day low.</p>
+    </details>
+    <details>
+      <summary>Parabolic shorts</summary>
+      <p>Three or more straight up closes after either a 50% run in 20 days or a close five ADRs above the 10-day average. The trigger is a break of the latest day's low, the first crack, with the stop at the high of the run. Shorts are never taken while the stock is still making higher highs.</p>
+    </details>
+    <details>
+      <summary>Terms on this page</summary>
+      <p>ADR is the average daily range over 20 days, as a percentage. Risk is the distance from trigger to stop, also shown in ADRs. Away is how far the last close is from the trigger. RS is the stock's relative-strength percentile inside the chosen index, where 100 is the strongest.</p>
+    </details>
+  </section>
+
+  <footer id="foot">Scans run after each US market close. This is a screening tool, not investment advice.</footer>
+</div>
+
+<script>
+(() => {
+  const TYPE_LABEL = { breakout: "Breakout", ep: "Episodic pivot", parabolic: "Parabolic short" };
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (n) => Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  let data = null;
+  const UNIVERSES = ["ndx", "spx"];
+  const fromHash = () => (UNIVERSES.includes(location.hash.slice(1)) ? location.hash.slice(1) : null);
+  const saved = store.get("universe");
+  const state = {
+    universe: fromHash() || (UNIVERSES.includes(saved) ? saved : "ndx"),
+    type: "all",
+    sort: store.get("sort") || "dist",
+  };
+
+  function setUniverse(u) {
+    state.universe = u;
+    state.type = "all";
+    store.set("universe", u);
+    if (data) render();
+  }
+  document.querySelectorAll(".seg button").forEach((b) =>
+    b.addEventListener("click", () => {
+      history.replaceState(null, "", "#" + b.dataset.u);
+      setUniverse(b.dataset.u);
+    }));
+  window.addEventListener("hashchange", () => {
+    const u = fromHash();
+    if (u && u !== state.universe) setUniverse(u);
+  });
+  $("sort").value = state.sort;
+  $("sort").addEventListener("change", (e) => { state.sort = e.target.value; store.set("sort", state.sort); renderList(); });
+
+  function asOfText(u) {
+    if (!u.as_of) return "the latest session";
+    const d = new Date(u.as_of + "T12:00:00");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function render() {
+    document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.u === state.universe)));
+    const u = data.universes[state.universe];
+    const setups = u.setups;
+    const trig = setups.filter((s) => s.status === "triggered").length;
+    $("count").innerHTML = `${setups.length}<small>${setups.length === 1 ? "setup" : "setups"}</small>`;
+    $("lede").textContent = setups.length
+      ? `in the ${u.name} at the close of ${asOfText(u)}. ${trig ? `${trig} triggered that day, ` : ""}${setups.length - trig} on watch for the next session.`
+      : `in the ${u.name} at the close of ${asOfText(u)}. Nothing meets the rules right now, which usually means the market is resting.`;
+    $("regime").hidden = !u.regime;
+    if (u.regime) {
+      $("regime").innerHTML = `<span class="dot ${u.regime.state}" aria-hidden="true"></span><span>${esc(u.benchmark)} closed at ${fmt(u.regime.close)}, ${esc(u.regime.text)}</span>`;
+    }
+    $("demo").hidden = !data.demo;
+    // Weekends plus a holiday leave at most ~4 days between closes; beyond that the nightly scan has stopped.
+    const ageDays = u.as_of ? (Date.now() - Date.parse(u.as_of + "T20:00:00Z")) / 864e5 : 0;
+    $("stale").hidden = data.demo || ageDays <= 5;
+    $("stale").textContent = `These levels are from the close of ${asOfText(u)} and have not been updated since. Treat them as out of date.`;
+
+    const counts = { all: setups.length, breakout: 0, ep: 0, parabolic: 0 };
+    setups.forEach((s) => counts[s.type]++);
+    $("chips").innerHTML = [["all", "All"], ["breakout", "Breakouts"], ["ep", "Episodic pivots"], ["parabolic", "Parabolic shorts"]]
+      .map(([k, l]) => `<button class="chip" data-t="${k}" aria-pressed="${state.type === k}">${l}<span>${counts[k]}</span></button>`).join("");
+    $("chips").querySelectorAll(".chip").forEach((c) =>
+      c.addEventListener("click", () => { state.type = c.dataset.t; render(); }));
+    renderList();
+  }
+
+  function renderList() {
+    const u = data.universes[state.universe];
+    let rows = u.setups.filter((s) => state.type === "all" || s.type === state.type);
+    const key = { dist: (s) => Math.abs(s.dist_pct), risk: (s) => s.risk_pct, rs: (s) => -s.rs }[state.sort];
+    rows = rows.slice().sort((a, b) => (a.status === b.status ? 0 : a.status === "triggered" ? -1 : 1) || key(a) - key(b));
+    if (!rows.length) {
+      $("list").innerHTML = `<div class="empty">No ${state.type === "all" ? "" : TYPE_LABEL[state.type].toLowerCase() + " "}setups in the ${esc(u.name)} today. Try the other index or another setup type.</div>`;
+      return;
+    }
+    $("list").innerHTML = rows.map(card).join("");
+  }
+
+  function card(s) {
+    const long = s.side === "long";
+    const trigLabel = s.status === "triggered" ? "Entry" : long ? "Buy above" : "Short below";
+    const away = s.status === "triggered" && s.dist_pct < 0
+      ? `${fmt(-s.dist_pct)}% past`
+      : `${fmt(Math.abs(s.dist_pct))}%`;
+    return `<article class="setup" data-type="${s.type}">
+      <div>
+        <div class="tk">${esc(s.ticker)}</div>
+        <div class="co">${esc(s.name)}${s.sector ? `<br>${esc(s.sector)}` : ""}</div>
+        <div class="kind">${TYPE_LABEL[s.type]}</div>
+        <span class="status ${s.status}">${s.status === "triggered" ? "Triggered" : "On watch"}</span>
+      </div>
+      <div class="chart">${chart(s)}<ul class="notes">${s.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul></div>
+      <dl class="levels">
+        <div class="big trig"><dt>${trigLabel}</dt><dd>${fmt(s.trigger)}</dd></div>
+        <div class="big stp"><dt>Stop</dt><dd>${fmt(s.stop)}</dd></div>
+        <div><dt>Risk</dt><dd>${fmt(s.risk_pct)}%</dd></div>
+        <div><dt>Risk in ADRs</dt><dd>${fmt(s.risk_adr)}</dd></div>
+        <div><dt>Last close</dt><dd>${fmt(s.close)}</dd></div>
+        <div><dt>Away</dt><dd>${away}</dd></div>
+        <div><dt>ADR</dt><dd>${fmt(s.adr)}%</dd></div>
+        <div><dt>RS</dt><dd>${s.rs}</dd></div>
+      </dl>
+    </article>`;
+  }
+
+  function chart(s) {
+    const c = s.chart, n = c.c.length;
+    const W = 720, PH = 200, VH = 44, GAP = 8, H = PH + GAP + VH, R = 92;
+    const plotW = W - R, step = plotW / n, bw = Math.max(2, step * 0.62);
+    let lo = Math.min(...c.l, s.stop, s.trigger), hi = Math.max(...c.h, s.stop, s.trigger);
+    const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+    const y = (p) => PH - ((p - lo) / (hi - lo)) * PH;
+    const x = (i) => i * step + step / 2;
+    const vmax = Math.max(...c.v);
+    let out = "";
+
+    // setup zone
+    const z = s.zone, zi = Math.max(0, n + z.from);
+    out += `<rect x="${x(zi) - step / 2}" y="${y(z.high)}" width="${plotW - (x(zi) - step / 2)}" height="${Math.max(1, y(z.low) - y(z.high))}" fill="var(--c)" opacity="0.09"/>`;
+
+    // moving averages
+    for (const [k, dash] of [["sma10", ""], ["sma20", "4 3"]]) {
+      const pts = c[k].map((v, i) => (Number.isFinite(v) ? `${x(i).toFixed(1)},${y(v).toFixed(1)}` : null)).filter(Boolean).join(" ");
+      out += `<polyline points="${pts}" fill="none" stroke="var(--ma)" stroke-width="1.4" stroke-dasharray="${dash}"/>`;
+    }
+    // candles + volume
+    for (let i = 0; i < n; i++) {
+      const up = c.c[i] >= c.o[i], col = up ? "var(--up)" : "var(--down)";
+      const top = y(Math.max(c.o[i], c.c[i])), bot = y(Math.min(c.o[i], c.c[i]));
+      out += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(c.h[i])}" y2="${y(c.l[i])}" stroke="${col}" stroke-width="1"/>`;
+      out += `<rect x="${x(i) - bw / 2}" y="${top}" width="${bw}" height="${Math.max(1, bot - top)}" fill="${col}"/>`;
+      const vh = (c.v[i] / vmax) * VH;
+      out += `<rect x="${x(i) - bw / 2}" y="${H - vh}" width="${bw}" height="${vh}" fill="${col}" opacity="0.35"/>`;
+    }
+    // levels
+    const lvl = (p, col, dash, label) => {
+      const yy = y(p);
+      return `<line x1="0" x2="${plotW}" y1="${yy}" y2="${yy}" stroke="${col}" stroke-width="2" stroke-dasharray="${dash}"/>
+        <text x="${plotW + 8}" y="${yy + 6}" fill="${col}" font-size="17" font-weight="700" font-family="Archivo, Arial, sans-serif">${label}</text>`;
+    };
+    let ty = y(s.trigger), sy = y(s.stop);
+    out += lvl(s.trigger, "var(--c)", "", fmt(s.trigger));
+    out += Math.abs(ty - sy) < 18
+      ? `<line x1="0" x2="${plotW}" y1="${sy}" y2="${sy}" stroke="var(--stop)" stroke-width="2" stroke-dasharray="6 4"/><text x="${plotW + 8}" y="${sy + (sy > ty ? 22 : -10)}" fill="var(--stop)" font-size="17" font-weight="700" font-family="Archivo, Arial, sans-serif">${fmt(s.stop)}</text>`
+      : lvl(s.stop, "var(--stop)", "6 4", fmt(s.stop));
+
+    const label = `${s.ticker} daily chart, last ${n} sessions. ${TYPE_LABEL[s.type]} trigger ${fmt(s.trigger)}, stop ${fmt(s.stop)}.`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">${out}</svg>`;
+  }
+
+  fetch("data/setups.json?t=" + Date.now())
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then((d) => {
+      data = d;
+      if (!data.universes[state.universe]) state.universe = "ndx";
+      const when = new Date(data.generated_at);
+      $("foot").textContent = `Last scan ${when.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}. Scans run after each US market close on daily bars from Yahoo Finance. This is a screening tool, not investment advice.`;
+      render();
+    })
+    .catch((e) => {
+      $("count").textContent = "–";
+      $("lede").textContent = `The scan file could not be loaded (${e.message}). Check that docs/data/setups.json exists and the scan workflow has run.`;
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+name: Tests
+
+on:
+  push:
+    paths-ignore: ["docs/data/**", "scanner/universe_cache.json"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scanner/requirements.txt
+
+      - run: pip install -r scanner/requirements.txt pytest
+
+      - run: python -m pytest -q tests
+
+      - name: Demo scan end to end
+        run: python scanner/scan.py --demo --out "$RUNNER_TEMP/setups.json"
