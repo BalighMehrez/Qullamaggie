@@ -77,8 +77,8 @@ UNIVERSES = {
     "ndx": {
         "name": "Nasdaq-100",
         "urls": [  # tried in order; the member table moved off the main article
-            "https://en.wikipedia.org/wiki/List_of_Nasdaq-100_companies",
             "https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies",
+            "https://en.wikipedia.org/wiki/List_of_Nasdaq-100_companies",
             "https://en.wikipedia.org/wiki/Nasdaq-100",
         ],
         "benchmark": "QQQ",
@@ -289,6 +289,11 @@ def regime(d: pd.DataFrame) -> dict:
 # --------------------------------------------------------------------------- #
 # Setup detectors. Each returns a dict or None.
 # --------------------------------------------------------------------------- #
+def _day(ts) -> str:
+    # notes name the session, since visitors read them on later days ("Sep 29", not "today")
+    return f"{ts:%b} {ts.day}"
+
+
 def _breakout_pattern(d: pd.DataFrame) -> dict | None:
     """Pattern test on the last bar of d (no status logic)."""
     c, h, l, v = (d[k].to_numpy() for k in ("Close", "High", "Low", "Volume"))
@@ -366,7 +371,7 @@ def detect_breakout(d: pd.DataFrame) -> dict | None:
         stop = max(float(last.Low), trigger * (1 - float(prev.adr) / 100))
         if last.Close > stop:
             return _bo_result("triggered", trigger, stop, y, d, adr,
-                              extra=f"Broke out today on {last.Volume / prev.vol50:.1f}x average volume")
+                              extra=f"Broke out {_day(d.index[-1])} on {last.Volume / prev.vol50:.1f}x average volume")
 
     # 2) Valid base right now, trigger not yet taken
     p = _breakout_pattern(d)
@@ -424,8 +429,8 @@ def detect_ep(d: pd.DataFrame) -> dict | None:
         prior_3m = c[i - 1] / c[max(0, i - 64)] - 1
         close_pos = (c[i] - l[i]) / max(h[i] - l[i], 1e-9)
         notes = [
-            f"Gapped +{gap * 100:.1f}% on {vmult:.1f}x average volume "
-            + ("today" if age == 0 else f"{age} day{'s' if age > 1 else ''} ago"),
+            f"Gapped +{gap * 100:.1f}% on {vmult:.1f}x average volume ({_day(d.index[i])}"
+            + ("" if age == 0 else f", {age} session{'s' if age > 1 else ''} earlier") + ")",
             f"gap day closed in the {'upper' if close_pos >= 0.5 else 'lower'} half of its range",
         ]
         if prior_3m < 0.10:
@@ -477,7 +482,7 @@ def detect_parabolic(d: pd.DataFrame) -> dict | None:
         stop = float(max(d.High.iloc[-2], last.High))
         if last.Close < stop:
             return _ps_result("triggered", trigger, stop, y, n,
-                              "First crack today: broke yesterday's low")
+                              f"First crack {_day(d.index[-1])}: broke the prior day's low")
     # 2) Still running: short a break of today's low next session
     p = _parabolic_run(d)
     if not p:

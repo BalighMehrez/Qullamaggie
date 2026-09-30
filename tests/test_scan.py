@@ -77,7 +77,7 @@ def test_breakout_triggered_on_volume(base_df):
     assert s and s["status"] == "triggered"
     assert s["trigger"] == pytest.approx(pivot)
     assert s["stop"] == pytest.approx(77.4)  # day's low, inside the one-ADR cap
-    assert "Broke out today" in s["notes"][0]
+    assert s["notes"][0].startswith("Broke out Sep 30 on")
 
 
 def test_breakout_stop_capped_at_one_adr(base_df):
@@ -122,7 +122,7 @@ def test_ep_triggered_after_follow_through(ep_df):
     assert s and s["status"] == "triggered"
     assert s["trigger"] == pytest.approx(48.0)
     assert s["stop"] == pytest.approx(45.5)
-    assert "2 days ago" in s["notes"][0]
+    assert s["notes"][0].endswith("(Sep 30, 2 sessions earlier)")
 
 
 def test_ep_dropped_when_gap_low_lost(ep_df):
