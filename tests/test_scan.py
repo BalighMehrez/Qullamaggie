@@ -227,6 +227,31 @@ def test_parse_constituents_two_row_header_and_exchange_prefix():
     assert members[0] == {"ticker": "T000", "name": "Co 0", "sector": ""}
 
 
+def test_fetch_constituents_falls_back_through_urls(monkeypatch, tmp_path):
+    import requests
+
+    good = "<table><tr><th>Symbol</th><th>Security</th></tr>" + "".join(
+        f"<tr><td>T{i:03d}</td><td>Co {i}</td></tr>" for i in range(100)) + "</table>"
+
+    class Resp:
+        def __init__(self, status, text=""):
+            self.status_code, self.text = status, text
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise requests.HTTPError(f"{self.status_code}")
+
+    pages = {"https://a/moved": Resp(404), "https://a/list": Resp(200, good)}
+    monkeypatch.setattr(requests, "get", lambda url, **kw: pages[url])
+    monkeypatch.setattr(scan, "UNIVERSE_CACHE", tmp_path / "cache.json")
+    monkeypatch.setitem(scan.UNIVERSES["ndx"], "urls", ["https://a/moved", "https://a/list"])
+    assert len(scan.fetch_constituents("ndx")) == 100
+    assert len(json.loads((tmp_path / "cache.json").read_text())["ndx"]) == 100
+
+    pages["https://a/list"] = Resp(200, "<table><tr><th>x</th></tr><tr><td>1</td></tr></table>")
+    assert len(scan.fetch_constituents("ndx")) == 100  # layout broke: cached copy is used
+
+
 def test_parse_constituents_skips_ambiguous_changes_table():
     body = "".join(f"<tr><td>2020</td><td>A{i:03d}</td><td>R{i:03d}</td></tr>" for i in range(100))
     html = f"""<table>

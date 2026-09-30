@@ -76,13 +76,17 @@ CFG = {
 UNIVERSES = {
     "ndx": {
         "name": "Nasdaq-100",
-        "url": "https://en.wikipedia.org/wiki/Nasdaq-100",
+        "urls": [  # tried in order; the member table moved off the main article
+            "https://en.wikipedia.org/wiki/List_of_Nasdaq-100_companies",
+            "https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies",
+            "https://en.wikipedia.org/wiki/Nasdaq-100",
+        ],
         "benchmark": "QQQ",
         "size": (90, 115),      # plausible member count, to recognise the right table
     },
     "spx": {
         "name": "S&P 500",
-        "url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
+        "urls": ["https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"],
         "benchmark": "SPY",
         "size": (480, 520),
     },
@@ -114,10 +118,10 @@ def parse_constituents(html: str, size: tuple[int, int]) -> list[dict]:
             cols.setdefault(label, []).append(c)
         # a label used twice (the S&P "changes" table has Added/Ticker and Removed/Ticker) is ambiguous
         pick = lambda *names: next((cols[n][0] for n in names if len(cols.get(n, ())) == 1), None)
-        sym_col = pick("Symbol", "Ticker", "Ticker symbol")
+        sym_col = pick("Symbol", "Ticker", "Ticker symbol", "Stock symbol")
         if sym_col is None or not lo <= len(table) <= hi:
             continue
-        name_col = pick("Security", "Company", "Name")
+        name_col = pick("Security", "Company", "Company name", "Name")
         sector_col = pick("GICS Sector", "ICB Industry", "Sector", "Industry")
         members, seen = [], set()
         for _, r in table.iterrows():
@@ -142,23 +146,27 @@ def fetch_constituents(key: str) -> list[dict]:
 
     cache = json.loads(UNIVERSE_CACHE.read_text()) if UNIVERSE_CACHE.exists() else {}
     repo = os.environ.get("GITHUB_REPOSITORY", "qullamaggie-scanner")
-    try:
-        resp = requests.get(
-            UNIVERSES[key]["url"],
-            headers={"User-Agent": f"qullamaggie-scanner/1.0 (https://github.com/{repo})"},
-            timeout=30,
-        )
-        resp.raise_for_status()
-        members = parse_constituents(resp.text, UNIVERSES[key]["size"])
-        print(f"{UNIVERSES[key]['name']}: {len(members)} members from Wikipedia", file=sys.stderr)
+    errors = []
+    for url in UNIVERSES[key]["urls"]:
+        try:
+            resp = requests.get(
+                url,
+                headers={"User-Agent": f"qullamaggie-scanner/1.0 (https://github.com/{repo})"},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            members = parse_constituents(resp.text, UNIVERSES[key]["size"])
+        except Exception as exc:  # network hiccup, moved page or layout change
+            errors.append(f"{url}: {exc}")
+            continue
+        print(f"{UNIVERSES[key]['name']}: {len(members)} members from {url}", file=sys.stderr)
         cache[key] = members
         UNIVERSE_CACHE.write_text(json.dumps(cache, indent=1))
         return members
-    except Exception as exc:  # network hiccup or page layout change
-        print(f"[warn] {key}: constituents fetch failed ({exc}); using cache", file=sys.stderr)
-        if key not in cache:
-            raise
-        return cache[key]
+    print(f"[warn] {key}: constituents fetch failed; using cache.\n  " + "\n  ".join(errors), file=sys.stderr)
+    if key not in cache:
+        raise RuntimeError(f"no member list for {UNIVERSES[key]['name']} and no cached copy")
+    return cache[key]
 
 
 def _bars(raw: pd.DataFrame | None, t: str) -> pd.DataFrame | None:
@@ -573,7 +581,14 @@ def run(demo: bool = False) -> dict:
         from demo_data import demo_universes
         members_by_key, frames = demo_universes()
     else:
-        members_by_key = {k: fetch_constituents(k) for k in UNIVERSES}
+        members_by_key, errors = {}, []
+        for k in UNIVERSES:  # try every index before giving up, so one log shows every problem
+            try:
+                members_by_key[k] = fetch_constituents(k)
+            except Exception as exc:
+                errors.append(str(exc))
+        if errors:
+            raise SystemExit("Could not load index members: " + "; ".join(errors))
         tickers = sorted({m["ticker"] for ms in members_by_key.values() for m in ms}
                          | {u["benchmark"] for u in UNIVERSES.values()})
         print(f"Downloading {len(tickers)} tickers...", file=sys.stderr)
