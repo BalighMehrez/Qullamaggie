@@ -26,9 +26,12 @@ Site: **https://balighmehrez.github.io/Qullamaggie/** (once Pages is on, below).
 After that it runs by itself:
 
 - **Nightly scan** runs at 22:30 UTC Monday to Friday (6:30 pm New York in
-  summer, 5:30 pm in winter). Use **Actions → Nightly scan → Run workflow** for
-  a fresh scan any time; during market hours it ignores the unfinished bar, so
-  the levels are always from a completed session.
+  summer, 5:30 pm in winter), with a backup run at 12:15 UTC the next morning,
+  before the open. GitHub can start scheduled runs hours late and Yahoo
+  sometimes lags behind the close, so a scan never replaces a newer one.
+  Use **Actions → Nightly scan → Run workflow** for a fresh scan any time;
+  during market hours it ignores the unfinished bar, so the levels are always
+  from a completed session.
 - If Yahoo or Wikipedia has a bad day (under 90% of an index downloads), the
   scan fails and the previous results stay up rather than a half-empty list.
   The page warns visitors when the data is more than five days old.

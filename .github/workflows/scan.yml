@@ -4,6 +4,9 @@ on:
   schedule:
     # 22:30 UTC Mon–Fri = 6:30 pm New York (EDT) / 5:30 pm (EST), after the close
     - cron: "30 22 * * 1-5"
+    # Backup before the next open (8:15 am EDT / 7:15 am EST, Tue–Sat): GitHub can delay
+    # the evening run for hours and Yahoo sometimes lags; an older scan never replaces a newer one.
+    - cron: "15 12 * * 2-6"
   workflow_dispatch: {}   # "Run workflow" button for manual scans (safe any time: a live bar is ignored)
 
 permissions:

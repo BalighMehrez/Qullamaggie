@@ -285,3 +285,44 @@ def test_partial_download_is_not_published(monkeypatch):
     monkeypatch.setattr(scan, "download", lambda tickers: {f"T{i}": bars(flat(200, 20)) for i in range(50)})
     with pytest.raises(SystemExit, match="only 50 of 100"):
         scan.run()
+
+
+def _scan(as_of, demo=False):
+    return {"generated_at": "2026-10-01T00:00:00+00:00", "demo": demo, "settings": {}, "universes": {
+        k: {"name": k, "scanned": 1, "setups": [], "as_of": as_of, "benchmark": "SPY", "regime": None}
+        for k in ("ndx", "spx")}}
+
+
+def test_older_scan_never_replaces_newer(monkeypatch, tmp_path):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    out = tmp_path / "setups.json"
+    out.write_text(json.dumps(_scan("2026-09-30")))
+    monkeypatch.setattr(scan, "run", lambda demo=False: _scan("2026-09-29"))  # Yahoo lagging
+    assert scan.main(["--out", str(out)]) == 0
+    assert json.loads(out.read_text())["universes"]["spx"]["as_of"] == "2026-09-30"
+    monkeypatch.setattr(scan, "run", lambda demo=False: _scan("2026-10-01"))
+    scan.main(["--out", str(out)])
+    assert json.loads(out.read_text())["universes"]["spx"]["as_of"] == "2026-10-01"
+
+
+def test_real_scan_replaces_demo_data(monkeypatch, tmp_path):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    out = tmp_path / "setups.json"
+    out.write_text(json.dumps(_scan("2026-12-31", demo=True)))
+    monkeypatch.setattr(scan, "run", lambda demo=False: _scan("2026-09-29"))
+    scan.main(["--out", str(out)])
+    assert json.loads(out.read_text())["demo"] is False
+
+
+def test_download_reports_incomplete_final_row(monkeypatch, capsys):
+    import yfinance as yf
+
+    def fake_download(tickers, **kw):
+        frames = {t: bars(flat(200, 20)) for t in tickers}
+        frames["LATE"].iloc[-1, frames["LATE"].columns.get_loc("Volume")] = np.nan
+        return pd.concat(frames, axis=1)
+
+    monkeypatch.setattr(yf, "download", fake_download)
+    out = scan.download(["OK", "LATE"])
+    assert out["LATE"].index[-1] < out["OK"].index[-1]
+    assert "1 tickers have no complete bar for 2026-09-29: LATE" in capsys.readouterr().err

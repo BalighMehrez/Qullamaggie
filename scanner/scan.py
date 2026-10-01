@@ -196,6 +196,7 @@ def download(tickers: list[str]) -> dict[str, pd.DataFrame]:
 
     out: dict[str, pd.DataFrame] = {}
     pending = list(tickers)
+    short_tail: dict[str, list[str]] = {}  # last date Yahoo sent -> tickers whose data stops earlier
     for attempt, batch in enumerate((len(pending), 50, 10)):
         if not pending:
             break
@@ -217,9 +218,14 @@ def download(tickers: list[str]) -> dict[str, pd.DataFrame]:
                 df = _bars(raw, t)
                 if df is None or df.empty:
                     failed.append(t)
-                elif len(df) >= 150:  # shorter histories (recent IPOs) are skipped, not retried
+                    continue
+                if df.index[-1] < raw.index[-1]:  # final row incomplete (NaN) or missing
+                    short_tail.setdefault(f"{raw.index[-1]:%Y-%m-%d}", []).append(t)
+                if len(df) >= 150:  # shorter histories (recent IPOs) are skipped, not retried
                     out[t] = df
         pending = failed
+    for day, ts in short_tail.items():
+        print(f"[info] {len(ts)} tickers have no complete bar for {day}: {' '.join(ts[:20])}", file=sys.stderr)
     if pending:
         print(f"[warn] no data for {len(pending)} tickers: {' '.join(pending[:40])}", file=sys.stderr)
     return out
@@ -604,6 +610,7 @@ def run(demo: bool = False) -> dict:
     session = session_date(frames)
     if session is None:
         raise SystemExit("No price data came back; keeping the previous scan.")
+    print(f"Latest session in the data: {session}", file=sys.stderr)
     stale = sorted(t for t, d in frames.items() if d.index[-1].date() != session)
     if stale:
         print(f"[warn] {len(stale)} tickers have no bar for {session}: {' '.join(stale[:40])}", file=sys.stderr)
@@ -648,16 +655,39 @@ def write_summary(data: dict, path: str) -> None:
         f.write("\n".join(lines) + "\n")
 
 
-if __name__ == "__main__":
+def published_as_of(path: Path) -> str | None:
+    """Session of the real scan already on the site, if any."""
+    try:
+        old = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    if old.get("demo"):
+        return None
+    return max((u.get("as_of") or "" for u in old.get("universes", {}).values()), default="") or None
+
+
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--demo", action="store_true", help="use synthetic data")
     ap.add_argument("--out", default=str(OUT_FILE))
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     data = run(demo=args.demo)
     out = Path(args.out)
+    new = max(u["as_of"] for u in data["universes"].values())
+    old = None if args.demo else published_as_of(out)
+    if old and new < old:
+        # Some evenings Yahoo serves the previous session for hours after the close.
+        print(f"::warning::Yahoo's data only reaches {new}, older than the published scan of {old}; "
+              "keeping the published scan.")
+        return 0
     out.parent.mkdir(parents=True, exist_ok=True)
     # allow_nan=False: browsers reject NaN in JSON, so fail here rather than ship a broken page
     out.write_text(json.dumps(data, separators=(",", ":"), allow_nan=False))
     print(f"Wrote {out} ({out.stat().st_size / 1024:.0f} KB)", file=sys.stderr)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         write_summary(data, os.environ["GITHUB_STEP_SUMMARY"])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
