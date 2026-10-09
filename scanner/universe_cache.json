@@ -2288,11 +2288,6 @@
    "sector": "Information Technology"
   },
   {
-   "ticker": "SKYD",
-   "name": "Paramount Skydance Corporation",
-   "sector": "Communication Services"
-  },
-  {
    "ticker": "PH",
    "name": "Parker Hannifin",
    "sector": "Industrials"
@@ -2556,6 +2551,11 @@
    "ticker": "SPG",
    "name": "Simon Property Group",
    "sector": "Real Estate"
+  },
+  {
+   "ticker": "SKYD",
+   "name": "Skydance Corporation",
+   "sector": "Communication Services"
   },
   {
    "ticker": "SWKS",
