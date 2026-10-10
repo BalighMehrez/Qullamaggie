@@ -311,6 +311,11 @@
    "sector": "Technology"
   },
   {
+   "ticker": "MRNA",
+   "name": "Moderna",
+   "sector": "Health Care"
+  },
+  {
    "ticker": "MDLZ",
    "name": "Mondelez International",
    "sector": "Consumer Staples"
