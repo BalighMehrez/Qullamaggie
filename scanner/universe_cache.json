@@ -2383,14 +2383,14 @@
    "sector": "Financials"
   },
   {
-   "ticker": "PEG",
-   "name": "Public Service Enterprise Group",
-   "sector": "Utilities"
-  },
-  {
    "ticker": "PTC",
    "name": "PTC Inc.",
    "sector": "Information Technology"
+  },
+  {
+   "ticker": "PEG",
+   "name": "Public Service Enterprise Group",
+   "sector": "Utilities"
   },
   {
    "ticker": "PSA",
